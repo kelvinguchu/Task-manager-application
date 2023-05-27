@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="task.css">
+</head>
+<body>
+    <section>
+        <div>
+            <input type="text" id="task" placeholder="Enter Task">
+            <ul id="suggestionList" class="hidden"></ul>
+        </div>
+        <div id="btns">
+            <button id="add">add</button>
+            <button id="clear">clear</button>
+        </div>
+        <div id="dotasks" >
+            <h3>To-Do tasks</h3>
+            <ul id="taskList" class="hidden">
+            </ul>
+            <button id="cleartodo">clear to-do list</button>
+        </div>
+        <div id="donetasks" >
+            <h3>Done Tasks</h3>
+            <ul id="doneList" class="hidden">
+            </ul>
+            <button id="cleardone">clear done tasks</button>
+        </div>
+        <div id="reminderContainer"></div>
+        <ul id="reminderList"></ul>
+    </section>
+</body>
+<script src="task.js"></script>
+</html>
