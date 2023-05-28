@@ -119,7 +119,7 @@ function addTask() {
   
     const timeElement = document.createElement('span');
     timeElement.classList.add('time');
-    timeElement.textContent = ` at ${time}`;
+    timeElement.textContent = ` at ${time}hrs`;
   
     taskItem.appendChild(checkBox);
     taskItem.appendChild(document.createTextNode(task));
@@ -161,6 +161,10 @@ function setReminder(task, time) {
   }
   
   function showReminder(task, taskItem, reminderTimeout) {
+    // Play a ring sound
+    const audio = new Audio('./notification.mp3');
+    audio.play();
+  
     if ('Notification' in window && Notification.permission === 'granted') {
       // Display a notification
       const notification = new Notification(`Reminder: Time to do task - ${task}`);
@@ -192,6 +196,7 @@ function setReminder(task, time) {
     // Remove the reminder timeout to prevent showing the reminder again
     clearTimeout(reminderTimeout);
   }
+  
 
 // Clear input field on clear button click
 document.getElementById('clear').addEventListener('click', function () {
