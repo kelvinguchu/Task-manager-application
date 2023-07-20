@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+  <section id="navbar">
+    <a id="logo" href="#"><img src="./LogoMakr-01nQdo.png" class="logo"></a>
+  
+    <div id="nav">
+      <ul>
+        <li class="account-dropdown">
+          <a href="#"><i class="fas fa-user-circle fa-2x"></i></a>
+          <div class="dropdown-content">
+            <a href="task.html">History</a>
+            <a href="#">Logout</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>      
+
+  <section>
+    <div>
+      <input type="text" id="task" placeholder="Enter Task">
+      <ul id="suggestionList" class="hidden"></ul>
+    </div>
+
+    <div id="btns">
+      <button id="add">add</button>
+      <button id="clear">clear</button>
+    </div>
+
+    <div id="dotasks">
+      <h3>To-Do tasks</h3>
+      <ul id="taskList" class="hidden"></ul>
+      <button id="cleartodo">clear to-do list</button>
+    </div>
+
+    <div id="donetasks">
+      <h3>Done Tasks</h3>
+      <ul id="doneList" class="hidden"></ul>
+      <button id="cleardone">clear done tasks</button>
+    </div>
+
+    <div id="reminderContainer"></div>
+    <ul id="reminderList"></ul>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
