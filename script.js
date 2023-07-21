@@ -1,237 +1,198 @@
 'use strict';
 
-// Retrieve necessary DOM elements
+// DOM element references
 const taskList = document.getElementById("taskList");
 const doneList = document.getElementById("doneList");
-const input = document.getElementById('task');
+const inputElem = document.getElementById('task');
 const suggestionList = document.getElementById('suggestionList');
-const reminderContainer = document.getElementById('reminderContainer');
-const reminderList = document.getElementById('reminderList');
 let selectedSuggestion = '';
+const remindersMap = new Map();  // A map to keep track of task reminders
 
-// Load the suggestions from the JSON file
+// Fetch suggestions from a JSON file
 fetch('suggestions.json')
-  .then(response => response.json())
-  .then(data => {
-    const suggestions = data.suggestions;
+    .then(response => response.json())
+    .then(data => {
+        const suggestions = data.suggestions;
+        // Attach input event listener when suggestions are loaded
+        inputElem.addEventListener('input', event => handleInput(event, suggestions));
+    })
+    .catch(error => {
+        console.error('Error loading suggestions:', error);
+    });
 
-    // Handle input event on the input field
-    input.addEventListener('input', handleInput);
+// Clear suggestions when input element is focused
+inputElem.addEventListener('focus', () => {
+    suggestionList.innerHTML = '';
+    selectedSuggestion = '';
+});
 
-    function handleInput(event) {
-      const searchTerm = event.target.value.toLowerCase().trim();
+// Set input value to selected suggestion when it loses focus
+inputElem.addEventListener('blur', () => {
+    if (selectedSuggestion) {
+        inputElem.value = selectedSuggestion;
+    }
+});
 
-      if (searchTerm.length > 0) {
-        suggestionList.classList.remove('hidden');
-      } else {
-        suggestionList.classList.add('hidden');
-      }
+// Handle input event to show/hide and filter suggestions
+function handleInput(event, suggestions) {
+    const searchTerm = event.target.value.toLowerCase().trim();
+    suggestionList.classList.toggle('hidden', searchTerm.length === 0);
+    suggestionList.innerHTML = '';
 
-      if (searchTerm.length === 0) {
-        // Clear previous suggestions if input is empty
-        suggestionList.innerHTML = '';
-        return;
-      }
+    if (searchTerm.length === 0) return;
 
-      // Filter and display matching suggestions
-      const matchingSuggestions = suggestions.filter(suggestion =>
+    const matchingSuggestions = suggestions.filter(suggestion =>
         suggestion.toLowerCase().startsWith(searchTerm)
-      );
+    );
 
-      selectedSuggestion = ''; // Reset selected suggestion
+    selectedSuggestion = '';
 
-      suggestionList.innerHTML = ''; // Clear previous suggestions
-
-      matchingSuggestions.forEach(suggestion => {
+    // Populate suggestion list based on the input
+    matchingSuggestions.forEach(suggestion => {
         const li = document.createElement('li');
         li.textContent = suggestion;
-
         li.addEventListener('click', function () {
-          selectedSuggestion = suggestion;
-          input.value = selectedSuggestion;
-          suggestionList.innerHTML = ''; // Clear suggestions after selection
-          suggestionList.classList.add('hidden'); // Hide suggestion list after selection
+            selectedSuggestion = suggestion;
+            inputElem.value = selectedSuggestion;
+            suggestionList.innerHTML = '';
+            suggestionList.classList.add('hidden');
         });
-
         suggestionList.appendChild(li);
-      });
+    });
 
-      // Check if the entered value is entirely different from the suggestions
-      const isDifferent = !suggestions.some(suggestion =>
-        suggestion.toLowerCase().startsWith(searchTerm)
-      );
-
-      // Hide suggestion list if the entered value is entirely different
-      if (isDifferent) {
+    // Hide suggestion list if no matches found
+    if (!matchingSuggestions.length) {
         suggestionList.classList.add('hidden');
-      }
     }
-  })
-  .catch(error => {
-    console.log('Error loading suggestions:', error);
-  });
+}
 
-// Listen for input box focus event
-input.addEventListener('focus', function () {
-  // Clear suggestions and selected suggestion when input is focused
-  suggestionList.innerHTML = '';
-  selectedSuggestion = '';
-});
-
-// Listen for input box blur event
-input.addEventListener('blur', function () {
-  // Set input value to the selected suggestion on blur if available
-  if (selectedSuggestion) {
-    input.value = selectedSuggestion;
-  }
-});
-
-// Add a task to the task list
-function addTask() {
-    const task = input.value.trim();
-  
-    if (task === '') {
-      showError('Task cannot be empty.');
-      return;
-    }
-  
-    const time = prompt('Enter the time for the task (format: HH:MM)');
-  
-    if (!isValidTime(time)) {
-      showError('Invalid time format. Please enter time in HH:MM format.');
-      return;
-    }
-  
+// Create and return a task list item
+function createTaskItem(task, time) {
     const taskItem = document.createElement('li');
     const checkBox = document.createElement('input');
     checkBox.type = 'checkbox';
+
+    // Handle task status change
     checkBox.addEventListener('change', function () {
-      // Move task item to the done list when checked, or back to the task list when unchecked
-      if (this.checked) {
-        taskItem.removeChild(timeElement); // Remove time element when task is marked as done
-        taskList.removeChild(taskItem);
-        doneList.appendChild(taskItem);
-      } else {
-        taskItem.insertBefore(timeElement, checkBox.nextSibling); // Add time element back when task is marked as undone
-        doneList.removeChild(taskItem);
-        taskList.insertBefore(taskItem, taskList.firstChild);
-      }
-      toggleListVisibility();
+        toggleTaskStatus(this.checked, taskItem, time);
     });
-  
+
     const timeElement = document.createElement('span');
     timeElement.classList.add('time');
     timeElement.textContent = ` at ${time}hrs`;
-  
+
     taskItem.appendChild(checkBox);
     taskItem.appendChild(document.createTextNode(task));
     taskItem.appendChild(timeElement);
-  
-    taskList.appendChild(taskItem); // Append task item to the task list
-    input.value = '';
-  
+
+    return taskItem;
+}
+
+// Toggle task between incomplete and completed
+function toggleTaskStatus(isChecked, taskItem, time) {
+    if (isChecked) {
+        taskItem.querySelector('.time').remove();
+        taskList.removeChild(taskItem);
+        doneList.appendChild(taskItem);
+
+        // Remove the task reminder once it's completed
+        const timeoutId = remindersMap.get(taskItem);
+        clearTimeout(timeoutId);
+        remindersMap.delete(taskItem);
+    } else {
+        const timeElement = document.createElement('span');
+        timeElement.classList.add('time');
+        timeElement.textContent = ` at ${time}hrs`;
+        taskItem.insertBefore(timeElement, taskItem.childNodes[1]);
+        doneList.removeChild(taskItem);
+        taskList.appendChild(taskItem);
+    }
     toggleListVisibility();
-    setReminder(task, time, taskItem);
-  }
-  
-  // Validate the time format (HH:MM)
-  function isValidTime(time) {
+}
+
+// Validate if provided time is in HH:MM format
+function isValidTime(time) {
     const pattern = /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/;
     return pattern.test(time);
-  }  
+}
 
-// Set a reminder for a task at the specified time
+// Add task to the task list
+function addTask() {
+    const task = inputElem.value.trim();
+    if (!task) return;
 
-// Set a reminder for a task at the specified time
-function setReminder(task, time) {
+    const time = prompt('Enter the time for the task (format: HH:MM)');
+    if (!isValidTime(time)) return;
+
+    const taskItem = createTaskItem(task, time);
+    taskList.appendChild(taskItem);
+    inputElem.value = '';
+
+    toggleListVisibility();
+    setReminder(task, time, taskItem);
+}
+
+// Set a task reminder
+function setReminder(task, time, taskItem) {
     const [hours, minutes] = time.split(':');
     const currentTime = new Date();
     const reminderTime = new Date(
-      currentTime.getFullYear(),
-      currentTime.getMonth(),
-      currentTime.getDate(),
-      Number(hours),
-      Number(minutes)
+        currentTime.getFullYear(),
+        currentTime.getMonth(),
+        currentTime.getDate(),
+        Number(hours),
+        Number(minutes)
     );
-  
-    if (reminderTime > currentTime) {
-      const timeDifference = reminderTime.getTime() - currentTime.getTime();
-      setTimeout(function () {
-        showReminder(task);
-      }, timeDifference);
-    }
-  }
-  
-  function showReminder(task, taskItem, reminderTimeout) {
-    // Play a ring sound
+
+    if (reminderTime <= currentTime) return;
+
+    const timeDifference = reminderTime.getTime() - currentTime.getTime();
+    const timeoutId = setTimeout(() => showReminder(task), timeDifference);
+
+    // Store the reminder so it can be cancelled later
+    remindersMap.set(taskItem, timeoutId);
+}
+
+// Show a task reminder
+function showReminder(task) {
     const audio = new Audio('./notification.mp3');
     audio.play();
-  
-    if ('Notification' in window && Notification.permission === 'granted') {
-      // Display a notification
-      const notification = new Notification(`Reminder: Time to do task - ${task}`);
-      setTimeout(function () {
-        notification.close(); // Close the notification after 30 seconds
-      }, 30000);
-    } else if ('Notification' in window && Notification.permission !== 'denied') {
-      // Request permission from the user to display notifications
-      Notification.requestPermission().then(function (permission) {
-        if (permission === 'granted') {
-          // Display a notification
-          const notification = new Notification(`Reminder: Time to do task - ${task}`);
-          setTimeout(function () {
-            notification.close(); // Close the notification after 30 seconds
-          }, 30000);
-        }
-      });
-    } else {
-      // Fallback to an alert if notifications are not supported
-      const alertTimeout = setTimeout(function () {
+
+    // Show a browser notification or fallback to alert
+    if (!('Notification' in window)) {
         alert(`Reminder: Time to do task - ${task}`);
-      }, 0); // Delay the alert to the next event loop iteration
-  
-      setTimeout(function () {
-        clearTimeout(alertTimeout);
-      }, 30000);
+        return;
     }
-  
-    // Remove the reminder timeout to prevent showing the reminder again
-    clearTimeout(reminderTimeout);
-  }
-  
 
-// Clear input field on clear button click
-document.getElementById('clear').addEventListener('click', function () {
-  input.value = '';
-});
+    if (Notification.permission === 'granted') {
+        const notification = new Notification(`Reminder: Time to do task - ${task}`);
+        setTimeout(() => notification.close(), 30000);
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission !== 'granted') return;
+            const notification = new Notification(`Reminder: Time to do task - ${task}`);
+            setTimeout(() => notification.close(), 30000);
+        });
+    }
+}
 
-// Clear task list on clear todo button click
-document.getElementById('cleartodo').addEventListener('click', function () {
-  clearList(taskList);
-});
-
-// Clear done list on clear done button click
-document.getElementById('cleardone').addEventListener('click', function () {
-  clearList(doneList);
-});
-
-// Clear the given list and toggle list visibility
+// Clear tasks from a given list
 function clearList(list) {
-  while (list.firstChild) {
-    list.removeChild(list.firstChild);
-  }
-  toggleListVisibility();
+    while (list.firstChild) {
+        list.removeChild(list.firstChild);
+    }
+    toggleListVisibility();
 }
 
-// Toggle visibility of task and done lists based on their child count
+// Toggle visibility of task and done lists
 function toggleListVisibility() {
-  taskList.classList.toggle('hidden', taskList.childElementCount === 0);
-  doneList.classList.toggle('hidden', doneList.childElementCount === 0);
+    taskList.classList.toggle('hidden', taskList.childElementCount === 0);
+    doneList.classList.toggle('hidden', doneList.childElementCount === 0);
 }
 
-// Retrieve the add button element and add event listener
-const addButton = document.getElementById('add');
-addButton.addEventListener('click', addTask);
-
-// Initially toggle visibility of task and done lists
+// Event listeners for UI buttons
+document.getElementById('clear').addEventListener('click', () => inputElem.value = '');
+document.getElementById('cleartodo').addEventListener('click', () => clearList(taskList));
+document.getElementById('cleardone').addEventListener('click', () => clearList(doneList));
+document.getElementById('add').addEventListener('click', addTask);
 toggleListVisibility();
